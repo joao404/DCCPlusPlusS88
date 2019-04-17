@@ -5,7 +5,13 @@ Dieses Projekt basiert auf dem Github-Projekt unter
 https://github.com/DccPlusPlus/BaseStation
 
 Zusätzlich zur bisherigen Funktionalität wurde eine S88-Schnittstelle für Arduino Uno und Mega eingefügt.
-Diese nutzt die Pins A3 bis A5.
+Diese basiert auf der S88-Schnittstelle der Z21-Zentrale von http://pgahtow.de/wiki/index.php?title=Zentrale.
+Die Schnittstelle bilden die Pins Pins A2 bis A5.
+
+A2 Data
+A3 Clk
+A4 Load
+A5 Reset
 
 Folgende Änderungen wurden gegenüber dem Ursprungsprojekt vorgenommen:
 
