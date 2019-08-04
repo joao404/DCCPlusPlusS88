@@ -20,7 +20,7 @@ Part of DCC++ BASE STATION for the Arduino
   #define ARDUINO_AVR_MEGA2560
 #endif
 
-#if defined  ARDUINO_AVR_UNO
+#if defined ARDUINO_AVR_UNO || defined ARDUINO_AVR_NANO 
 
   #define ARDUINO_TYPE    "UNO"
 
@@ -118,7 +118,7 @@ Part of DCC++ BASE STATION for the Arduino
 // SELECT S88 INTERACE
 /////////////////////////////////////////////////////////////////////////////////////
 
-#if defined  ARDUINO_AVR_UNO
+#if defined ARDUINO_AVR_UNO || defined ARDUINO_AVR_NANO || defined ARDUINO_AVR_MEGA2560
   #define S88DataPin A2
   #define S88ClkPin A3
   #define S88PSPin A4
