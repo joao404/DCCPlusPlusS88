@@ -124,8 +124,10 @@ Part of DCC++ BASE STATION for the Arduino
   #define S88PSPin A4
   #define S88ResetPin A5
 
+  #define S88AdrBase 100
   #define S88AdrMin 60
   #define S88AdrMax 100
+  
 #else
   #error CANNOT COMPILE - NO KNOWN S88 INTERFACE
 #endif

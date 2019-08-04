@@ -20,9 +20,6 @@
 
 
 
-  #define S88AdrBase 100
-  
-
   #define S88CLOCKTIME 400     //Microseconds = 1100Hz
   
 
