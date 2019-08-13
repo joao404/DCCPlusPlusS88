@@ -94,8 +94,12 @@ void Sensor::check(){
 ///////////////////////////////////////////////////////////////////////////////
 
 Sensor *Sensor::create(int snum, int pin, int pullUp, int v){
+
   Sensor *tt;
-  
+
+  if(snum<S88AdrMax && pin<S88AdrMax)
+  {
+    
   if(firstSensor==NULL){
     firstSensor=(Sensor *)calloc(1,sizeof(Sensor));
     tt=firstSensor;
@@ -125,6 +129,23 @@ Sensor *Sensor::create(int snum, int pin, int pullUp, int v){
     INTERFACE.print("<O>");
 
   s88Interface.init(snum);//execute Init for S88
+
+  }
+  else//value lies above 100 so we won't save it but we have to return tt
+  {
+    if(firstSensor==NULL){
+    tt=firstSensor;
+    } else if((tt=get(snum))==NULL){
+    tt=firstSensor;
+    while(tt->nextSensor!=NULL)
+      tt=tt->nextSensor;
+    }
+
+    if(v==1)
+      INTERFACE.print("<X>");
+
+  }
+
     
   return(tt);
   
