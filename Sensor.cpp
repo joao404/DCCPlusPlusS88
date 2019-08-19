@@ -97,7 +97,7 @@ Sensor *Sensor::create(int snum, int pin, int pullUp, int v){
 
   Sensor *tt;
 
-  if(snum<S88AdrMax && pin<S88AdrMax)
+  if(snum<S88AdrMax && pin<S88AdrMax && snum>1 && pin>1)//address not higher than Basisaddress of S88 and not effecting TX/RX at 0/1
   {
     
   if(firstSensor==NULL){
