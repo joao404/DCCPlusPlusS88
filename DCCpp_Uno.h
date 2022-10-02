@@ -62,6 +62,12 @@ Part of DCC++ BASE STATION for the Arduino
 
   #define DIRECTION_MOTOR_CHANNEL_PIN_A 12
   #define DIRECTION_MOTOR_CHANNEL_PIN_B 13
+  
+#ifdef RAILCOM
+  #define RAILCOM_PIN 9
+  #define RAILCOM_PIN_ACTIV HIGH
+  #define RAILCOM_PIN_INACTIV LOW
+#endif
 
 #elif MOTOR_SHIELD_TYPE == 1
 
@@ -88,6 +94,12 @@ Part of DCC++ BASE STATION for the Arduino
 
   #define DIRECTION_MOTOR_CHANNEL_PIN_A 12
   #define DIRECTION_MOTOR_CHANNEL_PIN_B 13
+  
+#ifdef RAILCOM
+  #define RAILCOM_PIN 9
+  #define RAILCOM_PIN_ACTIV HIGH
+  #define RAILCOM_PIN_INACTIV LOW
+#endif
 
 #else
 

@@ -9,12 +9,20 @@ Part of DCC++ BASE STATION for the Arduino
 
 /////////////////////////////////////////////////////////////////////////////////////
 //
+// ACTIVATE RAILCOM CUTOUT if needed
+//
+
+#define RAILCOM
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
 // DEFINE MOTOR_SHIELD_TYPE ACCORDING TO THE FOLLOWING TABLE:
 //
 //  0 = ARDUINO MOTOR SHIELD          (MAX 18V/2A PER CHANNEL)
 //  1 = POLOLU MC33926 MOTOR SHIELD   (MAX 28V/3A PER CHANNEL)
+//  2 = POLOLU MC33926 MOTOR SHIELD   (MAX 28V/3A PER CHANNEL)
 
-#define MOTOR_SHIELD_TYPE   0
+#define MOTOR_SHIELD_TYPE   2
 
 /////////////////////////////////////////////////////////////////////////////////////
 //

@@ -194,6 +194,10 @@ volatile RegisterList progRegs(2);                     // create a shorter list 
 CurrentMonitor mainMonitor(CURRENT_MONITOR_PIN_MAIN,"<p2>");  // create monitor for current on Main Track
 CurrentMonitor progMonitor(CURRENT_MONITOR_PIN_PROG,"<p3>");  // create monitor for current on Program Track
 
+#ifdef RAILCOM
+volatile bool railcomCutoutActiv{false}; // detection bit for railcom
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 // MAIN ARDUINO LOOP
 ///////////////////////////////////////////////////////////////////////////////
@@ -268,10 +272,19 @@ void setup(){
   #define DCC_ONE_BIT_TOTAL_DURATION_TIMER1 1855
   #define DCC_ONE_BIT_PULSE_DURATION_TIMER1 927
 
+  #define RAILCOM_TOTAL_DURATION_TIMER1 7880 // 7420 + 460
+  #define RAILCOM_PULSE_DURATION_TIMER1 440 // around 29us
+
   pinMode(DIRECTION_MOTOR_CHANNEL_PIN_A,INPUT);      // ensure this pin is not active! Direction will be controlled by DCC SIGNAL instead (below)
   digitalWrite(DIRECTION_MOTOR_CHANNEL_PIN_A,LOW);
 
   pinMode(DCC_SIGNAL_PIN_MAIN, OUTPUT);      // THIS ARDUINO OUPUT PIN MUST BE PHYSICALLY CONNECTED TO THE PIN FOR DIRECTION-A OF MOTOR CHANNEL-A
+  digitalWrite(DCC_SIGNAL_PIN_MAIN, LOW);
+
+#ifdef RAILCOM
+  pinMode(RAILCOM_PIN, OUTPUT);
+  digitalWrite(RAILCOM_PIN, LOW);
+#endif
 
   bitSet(TCCR1A,WGM10);     // set Timer 1 to FAST PWM, with TOP=OCR1A
   bitSet(TCCR1A,WGM11);
@@ -292,7 +305,10 @@ void setup(){
 
   mainRegs.loadPacket(1,RegisterList::idlePacket,2,0);    // load idle packet into register 1    
       
-  bitSet(TIMSK1,OCIE1B);    // enable interrupt vector for Timer 1 Output Compare B Match (OCR1B)    
+  bitSet(TIMSK1,OCIE1B);    // enable interrupt vector for Timer 1 Output Compare B Match (OCR1B) 
+#ifdef RAILCOM
+  bitSet(TIMSK1,OCIE1A);    // enable interrupt vector for Timer 1 Output Compare A Match (OCR1A)    
+#endif   
 
   // CONFIGURE EITHER TIMER_0 (UNO) OR TIMER_3 (MEGA) TO OUTPUT 50% DUTY CYCLE DCC SIGNALS ON OC0B (UNO) OR OC3B (MEGA) INTERRUPT PINS
   
@@ -442,8 +458,68 @@ void setup(){
 // NOW USE THE ABOVE MACRO TO CREATE THE CODE FOR EACH INTERRUPT
 
 ISR(TIMER1_COMPB_vect){              // set interrupt service for OCR1B of TIMER-1 which flips direction bit of Motor Shield Channel A controlling Main Track
-  DCC_SIGNAL(mainRegs,1)
+  if(mainRegs.currentBit==mainRegs.currentReg->activePacket->nBits){    /* IF no more bits in this DCC Packet */
+    mainRegs.currentBit=0;                                       /*   reset current bit pointer and determine which Register and Packet to process next--- */ 
+    if(mainRegs.nRepeat>0 && mainRegs.currentReg==mainRegs.reg){               /*   IF current Register is first Register AND should be repeated */
+      mainRegs.nRepeat--;                                        /*     decrement repeat count; result is this same Packet will be repeated */
+    } else if(mainRegs.nextReg!=NULL){                           /*   ELSE IF another Register has been updated */
+      mainRegs.currentReg=mainRegs.nextReg;                             /*     update currentReg to nextReg */
+      mainRegs.nextReg=NULL;                                     /*     reset nextReg to NULL */
+      mainRegs.tempPacket=mainRegs.currentReg->activePacket;            /*     flip active and update Packets */      
+      mainRegs.currentReg->activePacket=mainRegs.currentReg->updatePacket;
+      mainRegs.currentReg->updatePacket=mainRegs.tempPacket;
+    } else{                                               /*   ELSE simply move to next Register */
+      if(mainRegs.currentReg==mainRegs.maxLoadedReg)                    /*     BUT IF this is last Register loaded */
+        mainRegs.currentReg=mainRegs.reg;                               /*       first reset currentReg to base Register, THEN */
+      mainRegs.currentReg++;                                     /*     increment current Register (note this logic causes Register[0] to be skipped when simply cycling through all Registers) */
+    }                                                     /*   END-ELSE */
+  }                                                       /* END-IF: currentReg, activePacket, and currentBit should now be properly set to point to next DCC bit */
+
+#ifdef RAILCOM
+  if(mainRegs.currentBit==1){  //  first preamble bit which is acctually last one bit of last message
+  if(!railcomCutoutActiv)
+  {
+    digitalWrite(RAILCOM_PIN, RAILCOM_PIN_INACTIV); 
+    OCR1A = RAILCOM_TOTAL_DURATION_TIMER1;
+    OCR1B = RAILCOM_PULSE_DURATION_TIMER1;
+    railcomCutoutActiv = true;
+    return;
+  }
+  else
+  {
+    digitalWrite(RAILCOM_PIN, RAILCOM_PIN_ACTIV); // activate railcom cutout    
+    railcomCutoutActiv = false;
+  }
+  }
+#endif                                                       
+  if(mainRegs.currentReg->activePacket->buf[mainRegs.currentBit/8] & mainRegs.bitMask[mainRegs.currentBit%8]){     /* IF bit is a ONE */
+    OCR1A=DCC_ONE_BIT_TOTAL_DURATION_TIMER1;                               /*   set OCRA for timer N to full cycle duration of DCC ONE bit */
+    OCR1B=DCC_ONE_BIT_PULSE_DURATION_TIMER1;                               /*   set OCRB for timer N to half cycle duration of DCC ONE but */
+  } else{                                                                              /* ELSE it is a ZERO */
+    OCR1A=DCC_ZERO_BIT_TOTAL_DURATION_TIMER1;                              /*   set OCRA for timer N to full cycle duration of DCC ZERO bit */
+    OCR1B=DCC_ZERO_BIT_PULSE_DURATION_TIMER1;                              /*   set OCRB for timer N to half cycle duration of DCC ZERO bit */
+  }                                                                                    /* END-ELSE */
+                                                                                      
+  mainRegs.currentBit++;                                         /* point to next bit in current Packet */  
 }
+
+#ifdef RAILCOM
+ISR(TIMER1_COMPA_vect){ 
+  if(railcomCutoutActiv)
+  {
+    digitalWrite(RAILCOM_PIN, RAILCOM_PIN_INACTIV);
+    digitalWrite(DCC_SIGNAL_PIN_MAIN, LOW); 
+    TCCR1A &= ~((1<<COM1B0) | (1<<COM1B1));
+  }
+  else
+  {
+    // set pins back to normal operation
+    digitalWrite(RAILCOM_PIN, RAILCOM_PIN_INACTIV);
+    digitalWrite(DCC_SIGNAL_PIN_MAIN, LOW);
+    TCCR1A |= (1<<COM1B0) | (1<<COM1B1);
+  }
+}
+#endif
 
 #if defined ARDUINO_AVR_UNO || defined ARDUINO_AVR_NANO     // Configuration for UNO
 
